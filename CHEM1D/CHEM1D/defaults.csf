@@ -1,0 +1,237 @@
+###############################################
+#                                             #
+#  CHEM1D 3.0                                 #
+#         -> Casefile                         #
+#                                             #
+###############################################
+
+#
+# Solver
+#
+[SOLVER_CONVERGENCE]                    => Typical value 1.0e-10
+1.0E-10
+[SOLVER_MAXIMUMITERATIONS]              => Typical value 1000000
+10000
+[SOLVER_DIFFERENTIALSCHEME]             => Options : UPWIND, CENTRAL, EXPONENTIAL
+EXPONENTIAL
+[SOLVER_TIMEINTERGRATION]               => Options : BDF1, BDF2
+BDF2
+
+#
+# Models
+#
+[MODEL_FLAMETYPE]                       => Options : FREE, BURNERSTABILIZED, CERAMICBURNER, COUNTERFLOW, ORIGIN, BIO, PLATEHEATING, GASIFICATION
+FREE
+[MODEL_SIMULATIONTYPE]                  => Options : TIMEDEPENDENT, QUASITIMEDEPENDENT, STATIONARY
+STATIONARY
+[MODEL_TRANSPORT]                       => Options : LEWIS, MIXTUREAVERAGED, COMPLEX
+MIXTUREAVERAGED
+[MODEL_CHEMISTRY]                       => Options : DETAILED, FGM
+DETAILED
+[MODEL_RADIATION]                       => Options : NONE, PLANCK
+NONE
+
+#
+# Timestep Control
+#
+[TIMESTEPPER_INITIALTIMESTEP]           => Typical value 1.0e-7
+1.000000E-06
+[TIMESTEPPER_MINIMUMTIMESTEP]           => Typical value 1.0e-10
+1.000000E-10
+[TIMESTEPPER_MAXIMUMTIMESTEP]           => Typical value 1.0e-5
+1.000000E-03
+[TIMESTEPPER_MAXSIMULATIONTIME]         => Typical value 1.0e-3
+5.000000E+01
+[TIMESTEPPER_OUTPUTSTEP]                => Typical value 100
+100
+
+#
+# Boundary
+#
+[BOUNDARY_MASSFLOW]                     =>
+0.000000
+[BOUNDARY_INLETVELOCITY]                =>
+12.00000
+[BOUNDARY_EQUIVALENCERATIO]             => left and right equivalence ratio
+1.000   0.000
+[BOUNDARY_MIXTUREFRACTION]              => left and right mixture fraction
+1.000   0.000
+[BOUNDARY_INLETTEMPERATURE]             => left and right temperature
+300.0   300.0
+[BOUNDARY_INLETPRESSURE]                => pressure
+1.013250E5
+[BOUNDARY_MIXTURECALCULATION]           => Options : EQUIVALENCERATIO, MOLE, MASS, CONC
+EQUIVALENCERATIO
+
+#
+# Gasmixture
+#
+[GASMIXTURE_MIXTURECOMPOSITION]         => Unit : defined in BOUNDARY_MIXTURECALCULATION
+CH4      1.000      1.000
+[ENDOF_MIXTURECOMPOSITION]
+[GASMIXTURE_FUELCOMPOSITION]            => Unit : MOLE fractions, only together with EQUIVALENCERATIO
+CH4      1.000
+[ENDOF_FUELCOMPOSITION]
+[GASMIXTURE_OXIDIZERCOMPOSITION]        => Unit : MOLE fractions, only together with EQUIVALENCERATIO
+O2       0.210
+N2       0.790
+[ENDOF_OXIDIZERCOMPOSITION]
+[GASMIXTURE_BATHGAS]                    => Info : Abundant species, often N2
+N2
+[GASMIXTURE_FUCONV]                     => Info : Not supported
+0.0   0.0   0.0
+
+#
+# Grid
+#
+[GRID_NUMBEROFPOINTS]                   => Typical value : 100
+300
+[GRID_WEIGHT]                           => Default = 1, lower = less importanthigher = more important during regridding
+Density  1.0
+Temp     1.0
+CH4      1.0
+HeatRel  1.0
+[ENDOF_WEIGHT]
+[GRID_SETTOZERO]                        => Options : ON, OFF
+ON
+[GRID_REGRID]                           => Options : ON, OFF
+ON
+[GRID_UNIFORMITYMESH]                   => Typical value : 0.15
+0.15
+[GRID_MESHRATIO]                        => Typical value : 2.0
+2.0
+[GRID_LEFTBOUNDARY]                     => Typical value : -5.0
+-0.5
+[GRID_RIGHTBOUNDARY]                    => Typical value : 10.0
+2.0
+[GRID_FIXEDPOINT]                       => Variable name and value
+Temp  -100.0
+[GRID_ADAPTATIONINTERVAL]               => Typical value : 1  0
+1 0
+[GRID_INTERPOLATION]                    => Options : LINEAR, SPLINE
+LINEAR
+
+#
+# Preprocessing
+#
+[PREPROCESSING_STARTSOLUTIONFILE]       => Typical value : yiend.dat
+yistart.dat
+
+[PREPROCESSING_REACTIONMECHANISMFILE]   => Typical value : gri30.trot
+drm19NO.trot
+gri30.trot
+
+#
+# Postprocessing
+#
+[POSTPROCESSING_OUTPUTFILES]            => Note : supply a filename to the default ouput files
+MASS     yiend.dat     ON
+MOLE     xiend.dat     OFF
+CONC     ciend.dat     OFF
+SOURCE   siend.dat     ON
+LEWIS    lewis.dat     OFF
+LAMBDACP lambdacp.dat  ON
+[ENDOF_OUTPUTFILES]
+
+[POSTPROCESSING_USEROUTPUT]             => Options : Defined by user in postprocessing.f
+FLUENT   flamelet.dat  OFF                        
+[ENDOF_USEROUTPUT]
+
+[POSTPROCESSING_SENSITIVITY]            => Options : NONE, REACTIONS, ALL
+NONE
+ 
+#
+# Radiation
+#
+[RADIATION_FACTOR]                      => Info : Planck Mean Absorbtion Coefficient
+0.0                                          
+ 
+#
+# Flameacoustics
+#
+[FLAMEACOUSTICS_OSCILLATION]            => Options : NONE, BLOCK, FTHREE
+NONE                                              
+[FLAMEACOUSTICS_FREQUENCY]              => Typical value : 1.953125  Hz
+100.0000                                          
+[FLAMEACOUSTICS_AMPLITUDE]              => Typical value : 1.7e-4  cm/s
+1.000000                                          
+[FLAMEACOUSTICS_TIMEINTERVAL]           => Typical values : 2.5e-4 ... 0.51225
+0.000      0.000                                  
+ 
+#
+# LEWIS DIFFUSION MODEL OPTIONS
+#
+[LEWIS_TRANSPORTFILE]                   => Typical value : lewis.dat
+lewis.dat                            
+[LEWIS_DIFFUSIONCORRECTION]             => Options : Speciesname like N2
+N2
+[LEWIS_LAMBDACP]                        => Typical values : 2.58e-4  0.690
+0.2580E-03  0.690
+[LEWIS_ETACP]                           => Typical values : 1.67e-4  0.51
+0.1670E-03  0.510
+ 
+#
+# MIXTURE AVERAGED DIFFUSION MODEL OPTIONS
+#
+[MIXTUREAVERAGED_DIFFUSIONCORRECTION]   => Options : ALL, or speciesname like N2
+N2                                                
+ 
+#
+# COMPLEX DIFFUSION MODEL OPTIONS
+#
+ 
+#
+# SOLID
+#
+[SOLID_VOLUMETRICPOROSITY]              => Unit : cm^3/cm^3
+0.8200000                                         
+[SOLID_AREALPOROSITY]                   => Unit : cm^2/cm^2
+0.8200000                                         
+[SOLID_TORTUOSITY]                      => Note : Of the gas!
+0.9600000                                         
+[SOLID_LCERAMIC]                        => Unit : cm
+1.000000                                          
+[SOLID_LCOATING]                        => Unit : cm
+0.000000                                          
+[SOLID_SPECIFICSURFACE]                 => Unit : cm^2/cm^3
+27.00000                                          
+[SOLID_ALPHA]                           => Unit : J/(sKcm^2)   alpha=A0 + A1*T
+0.1000      0.000                                  
+[SOLID_CONDUCTIVITY]                    => Unit : J/(scmK)     lambda=L0 + L1*T
+0.2160E-01  0.000                                  
+[SOLID_HEATCAPICITY]                    => Unit : J/(gK)       cp=C0 + C1*T
+1.300      0.000                                  
+[SOLID_DENSITY]                         => Unit : g/cm^3
+3.000000                                          
+[SOLID_TSURROUNDINGS]                   => Unit : K
+293.0000                                          
+[SOLID_EXTINCTION]                      => Unit : 1/cm
+15.00000                                          
+[SOLID_ALBEDO]                          => Unit : -
+0.000000                                          
+[SOLID_EMISSIVITY]                      => Unit : -
+0.8500000                                         
+
+#
+# STRAIN AND CURVATURE
+#
+[STRAINANDCURVATURE_FLAMEGEOMETRY]      => Options : FLAT, CYLINDRICAL, SPHERICAL
+FLAT
+[STRAINANDCURVATURE_CURVATURE]          => Unit : 1/cm   (1/Radius)
+0.0
+[STRAINANDCURVATURE_STRAIN]             => Unit : 1/s
+0.0
+[STRAINANDCURVATURE_STRDOMLEFT]         => Unit : cm
+0.3
+[STRAINANDCURVATURE_STRDOMRIGHT]        => Unit : cm
+0.3
+[STRAINANDCURVATURE_FILE]               => File name (stretch.dat)
+
+
+#
+# ADDITIONAL SETTINGS
+#
+[ADDITIONAL_DEBUG]                      => Options : DEBUG, STANDARD, WARNING, ERROR
+STANDARD
+[ADDITIONAL_USERCOMMENT]                => Info line which will be written in the output files
+-
