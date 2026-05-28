@@ -1,7 +1,7 @@
 import cantera as ct
 
 
-def chemical_balance(fuel_name: str, oxidizer: str, n2_o2_ratio: float = 3.72):
+def chemical_balance(fuel_name: str, oxidizer: str, n2_o2_ratio: float = 3.76):
     """
     Compute the stoichiometric balance for the combustion of a fuel.
 
@@ -48,13 +48,11 @@ def chemical_balance(fuel_name: str, oxidizer: str, n2_o2_ratio: float = 3.72):
 
     Hf_fuel = hf_cantera(fuel_name)
     Hf_CO2 = hf_cantera('CO2')
-    Hf_H2O = hf_cantera('H2O')
-    Hf_O2 = hf_cantera('O2')
-    Hf_N2 = hf_cantera('N2')
+    Hf_H2O = -241.81 * 1000  # J/mol
 
     # --- Energy balance (per mole of fuel) ---
-    H_reactants = Hf_fuel + a_O2 * Hf_O2 + a_N2 * Hf_N2
-    H_products = n_CO2 * Hf_CO2 + n_H2O * Hf_H2O + a_N2 * Hf_N2
+    H_reactants = Hf_fuel  
+    H_products = n_CO2 * Hf_CO2 + n_H2O * Hf_H2O 
     delta_H = H_products - H_reactants
 
     # --- Molar masses (g/mol) from Cantera ---
@@ -87,30 +85,34 @@ def chemical_balance(fuel_name: str, oxidizer: str, n2_o2_ratio: float = 3.72):
     Air_F = 1 / F_Air_stoic if F_Air_stoic > 0 else float('inf')
 
     results = {
-        'fuel_formula': fuel_name,
-        'n_C': n_C,
-        'n_H': n_H,
-        'a_O2': a_O2,
-        'a_N2': a_N2,
-        'n_CO2': n_CO2,
-        'n_H2O': n_H2O,
-        'Hf_fuel_J_per_mol': Hf_fuel,
-        'Hf_CO2_J_per_mol': Hf_CO2,
-        'Hf_H2O_J_per_mol': Hf_H2O,
-        'delta_H_J_per_mol': delta_H,
-        'MW_fuel': MW_fuel,
-        'm_fuel_g': m_fuel,
-        'm_O2_g': m_O2,
-        'm_N2_g': m_N2,
-        'm_reactants_g': m_reactants,
-        'm_products_g': m_products,
-        'LHV_kJ_per_g': LHV_kJ_per_g,
-        'LHV_J_per_kg': LHV_J_per_kg,
-        'F_Ox_stoic': F_Ox_stoic,
-        'F_Air_stoic': F_Air_stoic,
-        'Ox_F': Ox_F,
-        'Air_F': Air_F,
-    }
+            'fuel_formula': fuel_name,
+            'n_C': n_C,
+            'n_H': n_H,
+            'a_O2': a_O2,
+            'a_N2': a_N2,
+            'n_CO2': n_CO2,
+            'n_H2O': n_H2O,
+            'Hf_fuel_J_per_mol': Hf_fuel,
+            'Hf_CO2_J_per_mol': Hf_CO2,
+            'Hf_H2O_J_per_mol': Hf_H2O,
+            'delta_H_J_per_mol': delta_H,
+            'MW_fuel': MW_fuel,
+            'MW_O2': MW_O2,
+            'MW_N2': MW_N2,
+            'MW_CO2': MW_CO2,
+            'MW_H2O': MW_H2O,
+            'm_fuel_g': m_fuel,
+            'm_O2_g': m_O2,
+            'm_N2_g': m_N2,
+            'm_reactants_g': m_reactants,
+            'm_products_g': m_products,
+            'LHV_kJ_per_g': LHV_kJ_per_g,
+            'LHV_J_per_kg': LHV_J_per_kg,
+            'F_Ox_stoic': F_Ox_stoic,
+            'F_Air_stoic': F_Air_stoic,
+            'Ox_F': Ox_F,
+            'Air_F': Air_F,
+        }
 
     return results
 

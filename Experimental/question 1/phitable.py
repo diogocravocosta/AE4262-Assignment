@@ -3,7 +3,7 @@ import cantera as ct
 import CoolProp.CoolProp as CP
 from Chemical_reactions import chemical_balance
 
-def phi_table(fuel, phi_values, power, D_tube, P_amb=101325, T_amb=298.15, n2_o2_ratio: float = 3.72):
+def phi_table(fuel, phi_values, power, D_tube, P_amb=101325, T_amb=298.15, n2_o2_ratio: float = 3.76):
     """
     Power in Watts, P_amb in Pa, T_amb in K, D_tube in mm
     """
@@ -36,17 +36,12 @@ def phi_table(fuel, phi_values, power, D_tube, P_amb=101325, T_amb=298.15, n2_o2
     table = [] 
 
     for phi in phi_values:
-        if phi <= 1:
-            limit = 'fuel'
-            FA = phi * fuel['F_Air_stoic']
-            f_f = react_fuel
-            air_f = react_fuel / FA
+
+        limit = 'fuel'
+        FA = phi * fuel['F_Air_stoic']
+        f_f = react_fuel
+        air_f = react_fuel / FA
             
-        else:
-            limit = 'air'
-            FA = phi * fuel['F_Air_stoic'] 
-            air_f = react_air
-            f_f = react_air * FA
 
         # Calculate mass flow rates.
         f_nlpm = f_f / fuel_density_nominal * 60    # Convert kg/s to NLPM    
@@ -93,7 +88,7 @@ def phi_table(fuel, phi_values, power, D_tube, P_amb=101325, T_amb=298.15, n2_o2
 
 # --- DEFAULT RUN EXECUTION ---
 if __name__ == '__main__':
-    test_power = 1000.0  # 1 kW target system power
+    
 
     # --- RUN RUNTIME CASE 1: METHANE (CH4) ---
     methane_phi_values = [0.8, 1.0, 1.2]
@@ -103,7 +98,7 @@ if __name__ == '__main__':
     phi_table(
         fuel=methane_profile, 
         phi_values=methane_phi_values, 
-        power=test_power, 
+        power=1000, 
         D_tube=21.0,        # 21 mm tube
         P_amb=101325, 
         T_amb=300.0
@@ -112,14 +107,14 @@ if __name__ == '__main__':
 
     # --- RUN RUNTIME CASE 2: HYDROGEN (H2) ---
     import numpy as np
-    hydrogen_phi_values = list(np.arange(0.5, 1.31, 0.1))
+    hydrogen_phi_values = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2,1.3]
 
     print("Generating Hydrogen data table...")
     hydrogen_profile = chemical_balance('H2', 'air')
     phi_table(
         fuel=hydrogen_profile, 
         phi_values=hydrogen_phi_values, 
-        power=test_power, 
+        power=250, 
         D_tube=4.0,         # 4 mm tube
         P_amb=101325, 
         T_amb=300.0
