@@ -8,7 +8,7 @@ clc ; clear; close all
 % H2 calibration
 [px_mm_x_H2, px_mm_y_H2] = calibratePixelPerMM( ...
     'C:\Users\franc\Documents\GitHub\AE4262-Assignment\Experimental\question 2\calibration\Calibration\H2\B16\B0001.b16' ...
-    ,true);
+    ,false);
 
 
 [H2_image_locs, CH4_image_loc] = OHPLIF_locations();
@@ -24,10 +24,10 @@ clc ; clear; close all
 
 
 n = length(H2_image_locs);
-baselines_H2 = [400,500,625,720,750,780,800,800,680];
-centers_H2 = [477,477,477,477,477,477,477,477,500];
-tops_H2 = [925,925,925,925,915,915,915,915,1290]; % Define tops for H2 images
-thersholds_H2 = [1100,1100,1100,1100,1100,600,360,300,350];
+baselines_H2 = [400,500,625,720,750,780,800,820,820];
+centers_H2 = [477,477,477,477,477,477,477,477,477];
+tops_H2 = [925,925,925,925,915,915,915,915,915]; % Define tops for H2 images
+thersholds_H2 = [1100,1100,1100,1100,1100,600,360,300,300];
 
 %flamefront_batch(H2_image_locs,baselines_H2,centers_H2,tops_H2,thersholds_H2,true)
 
@@ -40,18 +40,17 @@ thersholds_CH4 = [350,550,390];
 
 %flamefront_batch(CH4_image_loc,baselines_CH4,centers_CH4,tops_CH4,thersholds_CH4,true)
 
-tube_dia_mm_H2 = 4;
 
-results_H2 = flamefront_batch_area(H2_image_locs, baselines_H2, centers_H2, tops_H2, thersholds_H2, ...
+
+results_H2 = flamefront_sf_H2(H2_image_locs, baselines_H2, centers_H2, tops_H2, thersholds_H2, ...
     1/px_mm_x_H2, 1/px_mm_y_H2, ...
-    tube_dia_mm_H2, data_H2(:,2)'*1000, ...
+     data_H2(:,2)'*1000, ...
     true);
 
-tube_dia_mm_CH4 = 21;
 
-results_CH4 = flamefront_batch_area(CH4_image_loc, baselines_CH4, centers_CH4, tops_CH4, thersholds_CH4, ...
-    1/px_mm_x_CH4, 1/px_mm_y_CH4, ...
-    tube_dia_mm_CH4, data_CH4(:,2)'*1000, ...
+results_CH4 = flamefront_sf_CH4(CH4_image_loc, ...
+    1/px_mm_x_CH4, 1/px_mm_y_CH4, 0.25, 0.1, ...
+    data_CH4(:,2)'*1000, ...
     true);
 
 

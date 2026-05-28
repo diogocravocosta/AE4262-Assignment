@@ -56,6 +56,9 @@ function results = flamefront_batch_area(filenames, baseline, centers, tops, thr
         results(i).area_cap = area_cap;
         results(i).area  = area;     % [mm^2]
         results(i).Sf_areas    = V / area; % [mm/s]
+        results(i).alfa = results_angle(i).angle_deg / 2; % deg
+        results(i).alfa_v2 = results_angle(i).angle_deg_v2; %deg
+        results(i).SF_angle_v2 = velocities(i) * sin(deg2rad(results_angle(i).angle_deg_v2)/2);
         results(i).SF_angle = velocities(i) * sin(deg2rad(results_angle(i).angle_deg)/2);
         results(i).SF_perfect_tecnic = (4 * V * sin(deg2rad(results_angle(i).angle_deg)/2)) / (pi  * (2*r_avg (end))^2 );
 

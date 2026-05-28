@@ -1,4 +1,4 @@
-function results = flameFrontAngle_batch(filenames, baseline, centers, tops, thresholds, px2mm_x, px2mm_y, trunc_frac, verbose)
+function results = flameFrontAngle_batch(filenames, px2mm_x, px2mm_y, limit, trunc_frac, verbose)
 % FLAMEFRONTANGLE_BATCH  Batch flame front angle detection and fitting.
 %
 %   results = flameFrontAngle_batch(filenames, baseline, centers, tops, ...
@@ -34,15 +34,12 @@ function results = flameFrontAngle_batch(filenames, baseline, centers, tops, thr
                      'flame_right', {}, 'angle_deg', {}, 'line_left', {}, 'line_right', {});
 
     for i = 1:n
-        [ang, ll, lr, fl, fr, fc] = flameFrontAnglePlot(filenames{i}, centers(i), ...
-            thresholds(i), baseline(i), tops(i), px2mm_x, px2mm_y, trunc_frac, verbose);
 
+        stats = flameFrontStats(filenames{i}, 1/px2mm_x, 1/px2mm_y, limit, trunc_frac, verbose);
+    
         results(i).filename     = filenames{i};
-        results(i).flame_left   = fl;
-        results(i).flame_center = fc;
-        results(i).flame_right  = fr;
-        results(i).angle_deg    = ang;
-        results(i).line_left    = ll;
-        results(i).line_right   = lr;
+        results(i).flame_left   = stats.left_edge ;
+        results(i).flame_right  = stats.right_edge;
+        results(i).angle_deg = stats.alpha_deg;
     end
 end
