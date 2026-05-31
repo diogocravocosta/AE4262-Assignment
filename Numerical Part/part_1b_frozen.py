@@ -58,7 +58,7 @@ for fuel in fuels:
     else:
         fuel_name = 'Hydrogen ($H_2$)'
         
-    plt.title(f'Variation of Mixture $C_p$ for {fuel_name}-Air (Frozen Products)')
+    #plt.title(f'Variation of Mixture $C_p$ for {fuel_name}-Air (Frozen Products)')
     plt.xlabel('Temperature (K)', fontsize=12)
     plt.ylabel('Mixture Specific Heat, $C_{p,mix}$ [J / (kg K)]', fontsize=12)
     

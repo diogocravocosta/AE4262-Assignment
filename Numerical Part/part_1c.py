@@ -44,7 +44,7 @@ plt.figure(figsize=(9, 6))
 plt.plot(phis, T_ad_H2, '-o', color='#d62728', linewidth=2, label='Hydrogen ($H_2$)')
 plt.plot(phis, T_ad_CH4, '-s', color='#1f77b4', linewidth=2, label='Methane ($CH_4$)')
 
-plt.title('Complete Combustion $T_{ad}$ at $T_{in} = 1100$ K', fontsize=14)
+#plt.title('Complete Combustion $T_{ad}$ at $T_{in} = 1100$ K', fontsize=14)
 plt.xlabel('Equivalence Ratio, $\phi$', fontsize=12)
 plt.ylabel('Adiabatic Flame Temperature (K)', fontsize=12)
 plt.grid(True, linestyle='--', alpha=0.7)

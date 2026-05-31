@@ -30,7 +30,7 @@ for fuel in fuels:
         T_ad_a.append(gas.T)
     plt.plot(phis, T_ad_a, '-o', color=colors[fuel], label=labels[fuel], linewidth=2)
 
-plt.title('Adiabatic Flame Temp vs Equivalence Ratio\n(Baseline: $T_{in}$=300K, P=1 bar)')
+#plt.title('Adiabatic Flame Temp vs Equivalence Ratio\n(Baseline: $T_{in}$=300K, P=1 bar)')
 plt.xlabel('Equivalence Ratio, $\phi$')
 plt.ylabel('Adiabatic Flame Temperature, $T_{ad}$ (K)')
 plt.grid(True, linestyle='--', alpha=0.7)
@@ -55,7 +55,7 @@ for fuel in fuels:
         T_ad_b.append(gas.T)
     plt.plot(pressures_bar, T_ad_b, '-s', color=colors[fuel], label=labels[fuel], linewidth=2, markersize=8)
 
-plt.title('Adiabatic Flame Temp vs Pressure\n(Baseline: $\phi$=0.8, $T_{in}$=300K)')
+#plt.title('Adiabatic Flame Temp vs Pressure\n(Baseline: $\phi$=0.8, $T_{in}$=300K)')
 plt.xlabel('Pressure (bar)')
 plt.ylabel('Adiabatic Flame Temperature, $T_{ad}$ (K)')
 plt.grid(True, linestyle='--', alpha=0.7)
@@ -80,7 +80,7 @@ for fuel in fuels:
         T_ad_c.append(gas.T)
     plt.plot(T_ins, T_ad_c, '-^', color=colors[fuel], label=labels[fuel], linewidth=2, markersize=8)
 
-plt.title('Adiabatic Flame Temp vs Inlet Temperature\n(Baseline: $\phi$=0.8, P=1 bar)')
+#plt.title('Adiabatic Flame Temp vs Inlet Temperature\n(Baseline: $\phi$=0.8, P=1 bar)')
 plt.xlabel('Inlet Temperature, $T_{in}$ (K)')
 plt.ylabel('Adiabatic Flame Temperature, $T_{ad}$ (K)')
 plt.grid(True, linestyle='--', alpha=0.7)
@@ -113,7 +113,7 @@ for fuel in fuels:
         
     plt.plot(phis, NO_ppm_d, '-d', color=colors[fuel], label=labels[fuel], linewidth=2)
 
-plt.title('Equilibrium NO Emissions vs Equivalence Ratio\n(Baseline: $T_{in}$=300K, P=1 bar)')
+#plt.title('Equilibrium NO Emissions vs Equivalence Ratio\n(Baseline: $T_{in}$=300K, P=1 bar)')
 plt.xlabel('Equivalence Ratio, $\phi$')
 plt.ylabel('NO Emissions (ppm)')
 plt.yscale('log') # NO varies by orders of magnitude, log scale is best

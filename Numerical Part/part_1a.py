@@ -39,7 +39,7 @@ plt.figure(figsize=(10, 6))
 for sp in species_list:
     plt.plot(df_cp['Temperature (K)'], df_cp[sp], marker='o', markersize=4, label=sp)
 
-plt.title('Variation of Specific Heat ($C_p$) with Temperature Using using Cantera')
+#plt.title('Variation of Specific Heat ($C_p$) with Temperature Using using Cantera')
 plt.xlabel('Temperature (K)')
 plt.ylabel('$C_p$ [J / (kg K)] - Log Scale')
 
