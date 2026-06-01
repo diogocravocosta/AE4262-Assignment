@@ -36,24 +36,31 @@ def abel_invert(img):
     ).transform
 
 
-def plot_image(img, title):
-    """Display a single image in its own figure with per-image color scale."""
+OUT_DIR = os.path.join(os.path.dirname(__file__), "Phi_trio")
+
+
+def plot_image(img, title, save_path):
+    """Save a single image with white theme and per-image color scale."""
     fig, ax = plt.subplots(figsize=(5, 9))
-    fig.patch.set_facecolor("black")
-    ax.set_facecolor("black")
+    fig.patch.set_facecolor("white")
+    ax.set_facecolor("white")
 
     vmin = 0
     vmax = np.percentile(img[img > 0], 99) if np.any(img > 0) else 1
     im = ax.imshow(img, cmap="hot", aspect="auto", vmin=vmin, vmax=vmax)
-    ax.set_title(title, color="white", fontsize=12)
+    ax.set_title(title, color="black", fontsize=12)
     ax.axis("off")
     cb = fig.colorbar(im, ax=ax, shrink=0.6)
-    cb.ax.yaxis.set_tick_params(color="white")
-    plt.setp(cb.ax.yaxis.get_ticklabels(), color="white")
+    cb.ax.yaxis.set_tick_params(color="black")
+    plt.setp(cb.ax.yaxis.get_ticklabels(), color="black")
     plt.tight_layout()
+    fig.savefig(save_path, dpi=150, bbox_inches="tight", facecolor="white")
+    plt.close(fig)
 
 
 def main():
+    os.makedirs(OUT_DIR, exist_ok=True)
+
     for phi in PHI_VALUES:
         tag = f"H2_PHI{phi:.1f}"
         oh_path   = os.path.join(BASE_OHSTAR, tag, "B16", "B0001.b16")
@@ -63,13 +70,12 @@ def main():
         lif = readB16(plif_path).astype(np.float64)
         inv = abel_invert(oh)
 
-        plot_image(oh,  f"OH* Raw  \u03c6={phi:.1f}")
-        plot_image(inv, f"OH* Abel Inverted  \u03c6={phi:.1f}")
-        plot_image(lif, f"OH-PLIF  \u03c6={phi:.1f}")
+        slug = f"phi{phi:.1f}"
+        plot_image(oh,  f"OH* Raw  \u03c6={phi:.1f}",           os.path.join(OUT_DIR, f"{slug}_OH_raw.png"))
+        plot_image(inv, f"OH* Abel Inverted  \u03c6={phi:.1f}", os.path.join(OUT_DIR, f"{slug}_OH_abel.png"))
+        plot_image(lif, f"OH-PLIF  \u03c6={phi:.1f}",           os.path.join(OUT_DIR, f"{slug}_PLIF.png"))
 
-        print(f"  \u03c6 = {phi:.1f} \u2713")
-
-    plt.show()
+        print(f"  \u03c6 = {phi:.1f} \u2713  \u2192 saved to Phi_trio/")
 
 
 if __name__ == "__main__":

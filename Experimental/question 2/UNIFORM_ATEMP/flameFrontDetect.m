@@ -1,4 +1,4 @@
-function stats = flameFrontDetect(filepath, px_per_mm_x, px_per_mm_y, threshold, drop_frac, trunc_frac, verbose)
+function stats = flameFrontDetect(filepath, px_per_mm_x, px_per_mm_y, threshold, drop_frac, trunc_tip, trunc_base, verbose_diag, verbose_overlay, fit_lines_only)
 % FLAMEFRONTDETECT  Unified gradient-guided flame front detection for CH4 and H2.
 %
 %   Handles flames with double OH-brightness peaks (rich H2) by using the
@@ -14,13 +14,14 @@ function stats = flameFrontDetect(filepath, px_per_mm_x, px_per_mm_y, threshold,
 %
 %   Inputs
 %   ------
-%   filepath     - path to .b16 image file
-%   px_per_mm_x  - pixels per mm in x  (default 29.706)
-%   px_per_mm_y  - pixels per mm in y  (default 29.695)
-%   threshold    - local normalised threshold 0-1  (default 0.25)
-%   drop_frac    - gradient drop fraction to locate working point (default 0.80)
-%   trunc_frac   - fraction trimmed from each end of below-tip rows (default 0.10)
-%   verbose      - if true: plot row-avg, intensity, gradient, angle figures
+%   filepath        - path to .b16 image file
+%   px_per_mm_x     - pixels per mm in x  (default 29.706)
+%   px_per_mm_y     - pixels per mm in y  (default 29.695)
+%   threshold       - local normalised threshold 0-1  (default 0.25)
+%   drop_frac       - gradient drop fraction to locate working point (default 0.80)
+%   trunc_frac      - fraction trimmed from each end of below-tip rows (default 0.10)
+%   verbose_diag    - if true: plot row-avg, intensity, and gradient figures (Figs 1-3)
+%   verbose_overlay - if true: plot flame image with front overlay and fit (Fig 4)
 %
 %   Output struct fields  (identical to flameFrontStats)
 %   ----------------------------------------------------
@@ -30,12 +31,15 @@ function stats = flameFrontDetect(filepath, px_per_mm_x, px_per_mm_y, threshold,
 %   c_left, c_right   ([slope intercept] pixel-space fits)
 %   row_min, row_max  (detected flame boundaries)
 
-    if nargin < 2 || isempty(px_per_mm_x), px_per_mm_x = 29.706; end
-    if nargin < 3 || isempty(px_per_mm_y), px_per_mm_y = 29.695; end
-    if nargin < 4 || isempty(threshold),   threshold   = 0.25;   end
-    if nargin < 5 || isempty(drop_frac),   drop_frac   = 0.80;   end
-    if nargin < 6 || isempty(trunc_frac),  trunc_frac  = 0.10;   end
-    if nargin < 7 || isempty(verbose),     verbose     = true;   end
+    if nargin < 2 || isempty(px_per_mm_x),    px_per_mm_x    = 29.706; end
+    if nargin < 3 || isempty(px_per_mm_y),    px_per_mm_y    = 29.695; end
+    if nargin < 4 || isempty(threshold),       threshold      = 0.25;   end
+    if nargin < 5 || isempty(drop_frac),       drop_frac      = 0.80;   end
+    if nargin < 6  || isempty(trunc_tip),       trunc_tip       = 0.10;  end
+    if nargin < 7  || isempty(trunc_base),     trunc_base      = 0.10;  end
+    if nargin < 8  || isempty(verbose_diag),   verbose_diag    = true;  end
+    if nargin < 9  || isempty(verbose_overlay), verbose_overlay = true; end
+    if nargin < 10 || isempty(fit_lines_only), fit_lines_only  = false; end
 
     % --- load & normalise ---
     image      = readB16(filepath);
@@ -62,17 +66,19 @@ function stats = flameFrontDetect(filepath, px_per_mm_x, px_per_mm_y, threshold,
     end
     row_min = max(2, flame_rows_up(1));
     
-    % Redefined row_max: Where row_avg brightness has the highest derivative
-    % We compute the 1D gradient of the row average profile.
-    d_row_avg = -gradient(row_avg);
-    
-    % To be safe, we look for the steepest rise *below* the flame top (row_min)
-    search_region = row_min : nRows;
-    [~, max_deriv_idx] = max(d_row_avg(search_region));
-    
-    % Map back to global row indices
-    row_max = search_region(max_deriv_idx);
-    row_max = min(nRows-1, row_max);
+    % row_max: steepest negative gradient of row-average, detected independently
+    % for each half; the one further up (smaller row index) is used as the limit.
+    search_region  = row_min : nRows;
+
+    row_avg_left   = mean(img_smooth(:, 1:center_col),    2);
+    row_avg_right  = mean(img_smooth(:, center_col:end),  2);
+
+    [~, idx_left]  = max(-gradient(row_avg_left(search_region)));
+    [~, idx_right] = max(-gradient(row_avg_right(search_region)));
+
+    row_max_left   = search_region(idx_left);
+    row_max_right  = search_region(idx_right);
+    row_max        = min(nRows-1, min(row_max_left, row_max_right));
 
     % --- per-row detection (within flame boundaries only) ---
     left_all  = NaN(nRows, 1);
@@ -149,8 +155,8 @@ function stats = flameFrontDetect(filepath, px_per_mm_x, px_per_mm_y, threshold,
     widths_b = widths_px(below);
 
     nb  = numel(rows_b);
-    i0 = max(1, floor(trunc_frac * nb) + 1);
-    i1 = min(nb, floor((1 - trunc_frac) * nb));
+    i0 = max(1, floor(trunc_tip  * nb) + 1);
+    i1 = min(nb, floor((1 - trunc_base) * nb));
 
 
     if nb < 5
@@ -191,21 +197,29 @@ function stats = flameFrontDetect(filepath, px_per_mm_x, px_per_mm_y, threshold,
     % =========================================================
     % --- verbose plots ---
     % =========================================================
-    if verbose
+    if verbose_diag || verbose_overlay
         parts      = strsplit(filepath, {'\', '/'});
         short_name = parts{end-2};
 
-        % highlight rows evenly spaced in the fitted region
+        % highlight rows evenly spaced by count within the fitted region
         n_highlight    = 5;
-        highlight_rows = round(linspace(rows_b(i0), rows_b(i1), n_highlight));
+        fit_rows       = rows_b(i0:i1);
+        hi_idx         = round(linspace(1, length(fit_rows), n_highlight));
+        highlight_rows = fit_rows(hi_idx);
         cmap           = lines(n_highlight);
+    end
 
+    if verbose_diag
         % Figure 1: row-average profile with detected flame boundaries
         figure('Name', ['Row average - ', short_name]);
-        plot(1:nRows, row_avg, 'b', 'LineWidth', 1.2); hold on;
-        yline(row_thresh_up, 'r--', 'LineWidth', 1.2, 'DisplayName', sprintf('%.0f%% Up Threshold', row_thresh_frac_up*100));
-        xline(row_min, 'g-',  'LineWidth', 1.5, 'DisplayName', sprintf('Flame top (Row %d)', row_min));
-        xline(row_max, 'm-',  'LineWidth', 1.5, 'DisplayName', sprintf('Flame bottom max deriv (Row %d)', row_max));
+        plot(1:nRows, row_avg,       'b',  'LineWidth', 1.2, 'DisplayName', 'Full width'); hold on;
+        plot(1:nRows, row_avg_left,  '--', 'Color', [0.2 0.7 0.2], 'LineWidth', 1.2, 'DisplayName', 'Left half');
+        plot(1:nRows, row_avg_right, '--', 'Color', [0.8 0.4 0.0], 'LineWidth', 1.2, 'DisplayName', 'Right half');
+        yline(row_thresh_up, 'r--', 'LineWidth', 1.2, 'DisplayName', sprintf('%.0f%% threshold (row\\_min)', row_thresh_frac_up*100));
+        xline(row_min,       'b-',  'LineWidth', 1.5, 'DisplayName', sprintf('Flame top (Row %d)', row_min));
+        xline(row_max_left,  'Color', [0.2 0.7 0.2], 'LineWidth', 1.5, 'DisplayName', sprintf('row\\_max left (Row %d)',  row_max_left));
+        xline(row_max_right, 'Color', [0.8 0.4 0.0], 'LineWidth', 1.5, 'DisplayName', sprintf('row\\_max right (Row %d)', row_max_right));
+        xline(row_max,       'm-',  'LineWidth', 2.0, 'DisplayName', sprintf('row\\_max used (Row %d)', row_max));
         xlabel('Row index'); ylabel('Mean intensity (smoothed)');
         title({'Row-average intensity — flame boundaries', short_name}, 'FontSize', 8);
         legend('Location', 'best'); grid on; hold off;
@@ -236,14 +250,24 @@ function stats = flameFrontDetect(filepath, px_per_mm_x, px_per_mm_y, threshold,
             if ~isempty(hi)
                 plot(1:length(right_raw), right_raw, 'Color', cmap(hi,:), ...
                     'LineWidth', 1.2, 'DisplayName', sprintf('Row %d', r));
-            else
-                plot(1:length(right_raw), right_raw, 'Color', [0 0 1 0.1], ...
-                    'HandleVisibility', 'off');
+            % else
+            %     plot(1:length(right_raw), right_raw, 'Color', [0 0 1 0.1], ...
+            %         'HandleVisibility', 'off');
             end
             if ~isnan(right_all(r))
                 idx = right_all(r) - center_col + 1;
                 if idx >= 1 && idx <= length(right_raw)
-                    plot(idx, right_raw(idx), 'ro', 'MarkerSize', 3, 'HandleVisibility', 'off');
+                    if ~isempty(hi)
+                        plot(idx, right_raw(idx), 's', 'Color', cmap(hi,:), ...
+                            'MarkerFaceColor', cmap(hi,:), 'MarkerSize', 7, 'HandleVisibility', 'off');
+                        [~, xd] = edge_from_gradient(right_raw, right_sm, threshold, drop_frac);
+                        if ~isnan(xd) && xd >= 1 && xd <= length(right_raw)
+                            plot(xd, right_raw(xd), '^', 'Color', cmap(hi,:), ...
+                                'MarkerFaceColor', cmap(hi,:), 'MarkerSize', 7, 'HandleVisibility', 'off');
+                        end
+                    % else
+                    %     plot(idx, right_raw(idx), 'ro', 'MarkerSize', 3, 'HandleVisibility', 'off');
+                    end
                 end
             end
 
@@ -251,20 +275,39 @@ function stats = flameFrontDetect(filepath, px_per_mm_x, px_per_mm_y, threshold,
             if ~isempty(hi)
                 plot(1:length(grad_right), grad_right, 'Color', cmap(hi,:), ...
                     'LineWidth', 1.2, 'DisplayName', sprintf('Row %d', r));
-            else
-                plot(1:length(grad_right), grad_right, 'Color', [0 0 1 0.1], ...
-                    'HandleVisibility', 'off');
+            % else
+            %     plot(1:length(grad_right), grad_right, 'Color', [0 0 1 0.1], ...
+            %         'HandleVisibility', 'off');
             end
             if ~isnan(right_all(r))
                 idx = right_all(r) - center_col + 1;
                 if idx >= 1 && idx <= length(grad_right)
-                    plot(idx, grad_right(idx), 'ro', 'MarkerSize', 3, 'HandleVisibility', 'off');
+                    if ~isempty(hi)
+                        plot(idx, grad_right(idx), 's', 'Color', cmap(hi,:), ...
+                            'MarkerFaceColor', cmap(hi,:), 'MarkerSize', 7, 'HandleVisibility', 'off');
+                    % else
+                    %     plot(idx, grad_right(idx), 'ro', 'MarkerSize', 3, 'HandleVisibility', 'off');
+                    end
                 end
             end
         end
         figure(h_intens); hold off;
         figure(h_grad);   hold off;
 
+        fprintf('--- flameFrontDetect (gradient-guided) ---\n');
+        fprintf('File:              %s\n', filepath);
+        fprintf('Flame rows:        %d  to  %d\n', row_min, row_max);
+        fprintf('Gradient drop:     %.0f%% of gradient peak\n', drop_frac*100);
+        fprintf('Local threshold:   %.2f (normalised)\n', threshold);
+        fprintf('Truncation tip:    %.0f%%\n', trunc_tip*100);
+        fprintf('Truncation base:   %.0f%%\n', trunc_base*100);
+        fprintf('Left  fit:  x = %.4f*row + %.4f  (%.2f°)\n', c_left(1),  c_left(2),  a_left);
+        fprintf('Right fit:  x = %.4f*row + %.4f  (%.2f°)\n', c_right(1), c_right(2), a_right);
+        fprintf('Opening angle:     %.2f°\n', alpha_deg);
+        fprintf('Rows used in fit:  %d\n', numel(fit_rows));
+    end
+
+    if verbose_overlay
         % Figure 4: flame front overlay on image
         rows_fit = (rows_b(i0):rows_b(i1))';
         x_plot_L = polyval(c_left,  rows_fit);
@@ -272,38 +315,32 @@ function stats = flameFrontDetect(filepath, px_per_mm_x, px_per_mm_y, threshold,
 
         figure('Name', ['Flame Front Angle - ', short_name]);
         imagesc(image); colormap(hot); colorbar; hold on;
-        plot(left_edge,  rows, 'r',  'LineWidth', 1,   'DisplayName', 'Left front');
-        plot(right_edge, rows, 'b',  'LineWidth', 1,   'DisplayName', 'Right front');
+        if ~fit_lines_only
+            plot(left_b(i0:i1),  rows_b(i0:i1), 'g', 'LineWidth', 1, 'DisplayName', 'Left front');
+            plot(right_b(i0:i1), rows_b(i0:i1), 'b', 'LineWidth', 1, 'DisplayName', 'Right front');
+        end
         plot(x_plot_L, rows_fit, 'g-', 'LineWidth', 2, 'DisplayName', ...
             sprintf('Left fit (%.2f°)', a_left));
         plot(x_plot_R, rows_fit, 'm-', 'LineWidth', 2, 'DisplayName', ...
             sprintf('Right fit (%.2f°)', a_right));
-        xline(center_col,  'c--', 'LineWidth', 1,   'DisplayName', 'Center');
-        yline(row_min,     'w--', 'LineWidth', 1,   'DisplayName', 'Flame top');
-        yline(row_max,     'w:',  'LineWidth', 1,   'DisplayName', 'Flame bottom');
-        yline(rows_b(i0),  'g--', 'LineWidth', 0.5, 'HandleVisibility', 'off');
-        yline(rows_b(i1),  'g--', 'LineWidth', 0.5, 'HandleVisibility', 'off');
+        if ~fit_lines_only
+            xline(center_col,  'c--', 'LineWidth', 1,   'DisplayName', 'Center');
+            yline(row_min,     'w--', 'LineWidth', 1,   'DisplayName', 'Flame top');
+            yline(row_max,     'w:',  'LineWidth', 1,   'DisplayName', 'Flame bottom');
+            yline(rows_b(i0),  'g--', 'LineWidth', 0.5, 'HandleVisibility', 'off');
+            yline(rows_b(i1),  'g--', 'LineWidth', 0.5, 'HandleVisibility', 'off');
+        end
         axis image;
         title({short_name, sprintf('Angle: %.1f°', alpha_deg)}, 'FontSize', 10);
         legend('Location', 'best');
         hold off;
 
-        fprintf('--- flameFrontDetect (gradient-guided) ---\n');
-        fprintf('File:              %s\n', filepath);
-        fprintf('Flame rows:        %d  to  %d\n', row_min, row_max);
-        fprintf('Gradient drop:     %.0f%% of gradient peak\n', drop_frac*100);
-        fprintf('Local threshold:   %.2f (normalised)\n', threshold);
-        fprintf('Truncation:        %.0f%% - %.0f%%\n', trunc_frac*100, (1-trunc_frac)*100);
-        fprintf('Left  fit:  x = %.4f*row + %.4f  (%.2f°)\n', c_left(1),  c_left(2),  a_left);
-        fprintf('Right fit:  x = %.4f*row + %.4f  (%.2f°)\n', c_right(1), c_right(2), a_right);
-        fprintf('Opening angle:     %.2f°\n', alpha_deg);
-        fprintf('Rows used in fit:  %d\n', length(rows_fit));
     end
 end
 
 
 % =========================================================
-function idx = edge_from_gradient(raw_outward, smooth_outward, threshold, drop_frac)
+function [idx, x_drop] = edge_from_gradient(raw_outward, smooth_outward, threshold, drop_frac)
 % EDGE_FROM_GRADIENT  Detect flame edge in a 1D outward-scanning profile.
 %
 %   1. Gradient of smoothed profile → peak_i (steepest rising point)
@@ -312,13 +349,18 @@ function idx = edge_from_gradient(raw_outward, smooth_outward, threshold, drop_f
 %   3. Re-normalise raw data in window around x_drop locally
 %   4. First crossing of threshold scanning outward → flame edge index
 %
-%   Returns index into raw_outward (NaN if not found).
+%   Returns index into raw_outward (NaN if not found), and x_drop index.
 
-    idx  = NaN;
-    grad = gradient(double(smooth_outward));
+    idx    = NaN;
+    x_drop = NaN;
+    grad   = gradient(double(smooth_outward));
 
-    [g_max, peak_i] = max(grad);
-    if g_max <= 0, return; end
+    g_global_max = max(grad);
+    if g_global_max <= 0, return; end
+    [~, locs] = findpeaks(grad, 'MinPeakHeight', 0.10 * g_global_max);
+    if isempty(locs), return; end
+    peak_i = locs(1);
+    g_max  = grad(peak_i);
 
     % locate x_drop: first point after peak where gradient falls to drop_frac
     post  = grad(peak_i:end);

@@ -31,8 +31,8 @@ function plotSfAngle(phi_CH4, phi_H2, results_H2, results_CH4)
     
     % Labels and formatting
     xlabel('\phi  (equivalence ratio)');
-    ylabel('S_f  (°)');
-    title('Flame angle S_f vs \phi  —  CH_4');
+    ylabel('S_f  (mm/s)');
+    title('Flame speed S_f vs \phi  —  CH_4');
     
     % Add legend to distinguish the data
     legend('Experiments', 'Literature', 'Cantera', 'Location', 'best');
@@ -59,8 +59,8 @@ function plotSfAngle(phi_CH4, phi_H2, results_H2, results_CH4)
     
     % Labels and formatting
     xlabel('\phi  (equivalence ratio)');
-    ylabel('S_f  (°)');
-    title('Flame angle S_f vs \phi  —  H_2');
+    ylabel('S_f  (mm/s)');
+    title('Flame speed S_f vs \phi  —  H_2');
     
     % Add legend to distinguish the data
     legend('Experiments', 'Literature', 'Cantera', 'Location', 'best');

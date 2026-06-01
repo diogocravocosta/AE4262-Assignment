@@ -13,7 +13,7 @@ clc; clear; close all;
 %% ─── CONFIGURE THESE ───────────────────────────────────────────────
 BASE_OHSTAR = 'C:\Users\franc\Documents\GitHub\AE4262-Assignment\Experimental\question 4\OHstar';
 BASE_PLIF   = 'C:\Users\franc\Documents\GitHub\AE4262-Assignment\Experimental\question 2\LIF';
-phi_values  = 0.5:0.1:1.3;
+phi_values  = [0.7,1,1.3];
 %% ───────────────────────────────────────────────────────────────────
 
 % Make sure Python can find abel_invert.py in this folder
@@ -41,34 +41,33 @@ for k = 1:numel(phi_values)
     oh_inv    = double(py_result);
 
     % --- OH* Raw ---
-    figure('Color', 'k', 'Name', sprintf('OH* Raw  phi=%.1f', phi));
-    imagesc(oh_raw);
-    axis image; axis off; colormap(hot);
-    caxis([0, prctile(oh_raw(oh_raw > 0), 99)]);
-    cb = colorbar; cb.Color = 'w';
-    title(sprintf('OH* Raw  \\phi = %.1f', phi), 'Color', 'w', 'Interpreter', 'tex');
-    set(gca, 'Color', 'k');
+    % figure('Name', sprintf('OH* Raw  phi=%.1f', phi));
+    % imagesc(oh_raw);
+    % axis image; axis off; colormap(hot);
+    % caxis([0, prctile(oh_raw(oh_raw > 0), 99)]);
+    % colorbar;
+    % title(sprintf('OH* Raw  \\phi = %.1f', phi), 'Interpreter', 'tex');
 
     % --- OH* Abel Inverted ---
-    figure('Color', 'k', 'Name', sprintf('OH* Abel  phi=%.1f', phi));
+    figure('Name', sprintf('OH* Abel  phi=%.1f', phi));
     imagesc(oh_inv);
     axis image; axis off; colormap(hot);
     pos_vals = oh_inv(oh_inv > 0);
     if ~isempty(pos_vals)
         caxis([0, prctile(pos_vals, 99)]);
     end
-    cb = colorbar; cb.Color = 'w';
-    title(sprintf('OH* Abel Inverted  \\phi = %.1f', phi), 'Color', 'w', 'Interpreter', 'tex');
-    set(gca, 'Color', 'k');
+    xlim([300 640]); ylim([600 1250]);
+    colorbar;
+    title(sprintf('OH* Abel Inverted  \\phi = %.1f', phi), 'Interpreter', 'tex');
 
     % --- OH-PLIF ---
-    figure('Color', 'k', 'Name', sprintf('PLIF  phi=%.1f', phi));
+    figure('Name', sprintf('PLIF  phi=%.1f', phi));
     imagesc(plif);
     axis image; axis off; colormap(hot);
     caxis([0, prctile(plif(plif > 0), 99)]);
-    cb = colorbar; cb.Color = 'w';
-    title(sprintf('OH-PLIF  \\phi = %.1f', phi), 'Color', 'w', 'Interpreter', 'tex');
-    set(gca, 'Color', 'k');
+    xlim([310 650]); ylim([300 950]);
+    colorbar;
+    title(sprintf('OH-PLIF  \\phi = %.1f', phi), 'Interpreter', 'tex');
 
     fprintf('  phi = %.1f  done\n', phi);
 end

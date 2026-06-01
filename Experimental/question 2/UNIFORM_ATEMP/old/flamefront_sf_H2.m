@@ -1,4 +1,4 @@
-function results = flamefront_sf_H2(filenames, px2mm_x, px2mm_y, threshold, drop_frac, trunc_frac, velocities, verbose)
+function results = flamefront_sf_H2(filenames, px2mm_x, px2mm_y, threshold, drop_frac, trunc_frac, velocities, verbose_diag, verbose_overlay)
 % FLAMEFRONT_SF_H2  Batch flame speed for H2 using unified gradient-guided detection.
 %
 %   Inputs:
@@ -14,9 +14,8 @@ function results = flamefront_sf_H2(filenames, px2mm_x, px2mm_y, threshold, drop
 %   Output fields per image:
 %       filename, flame_left, flame_right, angle_deg, SF_from_angle
 
-    if nargin < 8
-        verbose = true;
-    end
+    if nargin < 8 || isempty(verbose_diag),    verbose_diag    = true; end
+    if nargin < 9 || isempty(verbose_overlay), verbose_overlay = true; end
 
     n       = length(filenames);
     results = struct('filename', cell(1,n), 'flame_left', cell(1,n), ...
@@ -25,12 +24,13 @@ function results = flamefront_sf_H2(filenames, px2mm_x, px2mm_y, threshold, drop
 
     for i = 1:n
         stats = flameFrontDetect(filenames{i}, ...
-            1/px2mm_x, 1/px2mm_y, threshold, drop_frac, trunc_frac, verbose);
+            1/px2mm_x, 1/px2mm_y, threshold, drop_frac, trunc_frac, verbose_diag, verbose_overlay);
 
         results(i).filename      = filenames{i};
         results(i).flame_left    = stats.left_edge;
         results(i).flame_right   = stats.right_edge;
         results(i).angle_deg     = stats.alpha_deg;
+        results(i).alpha_half_deg = stats.alpha_half_deg;
         results(i).SF_from_angle = velocities(i) * sin(deg2rad(stats.alpha_deg) / 2);
     end
 end
