@@ -82,7 +82,7 @@ plt.figure(figsize=(8, 5))
 plt.plot(phis, data['CH4'], '-o', label='Methane ($CH_4$)', linewidth=2, color='#1f77b4', markersize=8)
 plt.plot(phis, data['H2'], '-s', label='Hydrogen ($H_2$)', linewidth=2, color='#d62728', markersize=8)
 
-plt.title('NO Mass Fraction as a function of $\phi$', fontsize=14)
+#plt.title('NO Mass Fraction as a function of $\phi$', fontsize=14)
 plt.xlabel('Equivalence Ratio, $\phi$', fontsize=12)
 plt.ylabel('NO Mass Fraction ($Y_{NO}$)', fontsize=12)
 plt.grid(True, linestyle='--', alpha=0.7)
