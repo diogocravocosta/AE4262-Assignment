@@ -160,12 +160,12 @@ RESULTS_DIR.mkdir(exist_ok=True)
 # ── simulation settings ───────────────────────────────────────────────────────
 
 #: Equivalence ratios to simulate (matches Table 1, H₂ premixed, Lab Exercise)
-PHI_VALUES: List[float] = [0.7, 1.0, 1.3]
+PHI_VALUES: List[float] = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3]
 
 #: Mechanism file.  Burke et al. H₂/O₂ mechanism (bundled with Cantera ≥ 3.0)
 #: Change to a full path string if using a custom mechanism:
 #:   MECHANISM = "/path/to/li_h2.yaml"
-MECHANISM: str = "h2o2_OHstar.yaml"
+MECHANISM: str = "h2o2.yaml"
 
 #: Fallback mechanism (always bundled, but includes many CH₄ species)
 MECHANISM_FALLBACK: str = "gri30.yaml"
@@ -191,20 +191,7 @@ DOMAIN_WIDTH: float = 0.04  # 4 cm is sufficient for H₂ flames at 1 atm
 COORD: str = "x_shifted"
 
 #: Species to include in the per-φ profile plots
-SPECIES_TO_PLOT: List[str] = ["OH", "OH*", "H2O", "H2", "O2", "H", "O", "HO2"]
-
-#: Scale factor for OH* in all plots. OH* is ~1e8× smaller than OH so needs
-#: a large multiplier to be visible on the same axis.
-OHSTAR_SCALE: int = 5_000_000_000
-
-#: Scale factor for OH in single-phi and reaction-zone plots
-OH_SCALE: int = 50
-
-#: Scale factor for OH in overlay (phi-sweep) plots
-OH_SCALE_OVERLAY: int = 1
-
-#: Scale factor for OH* in overlay (phi-sweep) plots
-OHSTAR_SCALE_OVERLAY: int = 5_000_000_000
+SPECIES_TO_PLOT: List[str] = ["OH", "H2O", "H2", "O2", "H", "O", "HO2"]
 
 #: Figure DPI
 FIG_DPI: int = 150
@@ -395,7 +382,6 @@ def plot_single_phi(res: SimResult, save: bool = True) -> "matplotlib.figure.Fig
 
     colours = {
         "OH":  "#2ca02c",
-        "OH*": "#d62728",  # red – distinct from ground-state OH
         "H2O": "#1f77b4",
         "H2":  "#ff7f0e",
         "O2":  "#9467bd",
@@ -405,25 +391,17 @@ def plot_single_phi(res: SimResult, save: bool = True) -> "matplotlib.figure.Fig
     }
     # Scale small species so every line is clearly visible.
     # H2O, H2, O2 are O(0.1–0.3): no scaling needed.
-    # OH, H, O are O(0.01): OH_SCALE brings them into view.
-    # HO2 is O(5e-4): ×500.
-    # OH* uses module-level OHSTAR_SCALE
-    scale = {"OH": OH_SCALE, "OH*": OHSTAR_SCALE, "H2O": 1, "H2": 1, "O2": 1,
-             "H": 50, "O": 50, "HO2": 500}
+    # OH, H, O are O(0.01): ×10 brings them into view.
+    # HO2 is O(5e-4): ×100.
+    scale = {"OH": 50, "H2O": 1, "H2": 1, "O2": 1, "H": 50, "O": 50, "HO2": 500}
 
     for sp, xsp in res.X.items():
-        f = scale.get(sp, 1)
-        if np.max(xsp) * f < 1e-8:
+        if np.max(xsp) < 1e-8:
             continue
-        if sp == "OH*":
-            label = f"X(OH*) ×{f:.2e}"
-        elif f > 1:
-            label = f"X({sp}) ×{f}"
-        else:
-            label = f"X({sp})"
+        f = scale.get(sp, 1)
+        label = f"X({sp}) ×{f}" if f > 1 else f"X({sp})"
         ax_sp.plot(xc, xsp * f, color=colours.get(sp, "grey"),
-                   linewidth=2.5 if sp == "OH" else 1.5,
-                   linestyle="--" if sp == "OH*" else "-",
+                   linewidth=2.5 if sp == "OH" else 1.2,
                    label=label)
 
     ax_T.plot(xc, res.T, color="black", linewidth=2.0, linestyle="--", label="T [K]")
@@ -453,119 +431,7 @@ def plot_single_phi(res: SimResult, save: bool = True) -> "matplotlib.figure.Fig
     return fig
 
 
-def plot_single_phi_with_bars(res: SimResult, save: bool = True) -> "matplotlib.figure.Figure":
-    """
-    Full-domain flame profile (same as plot_single_phi) with two 'hot' colourmap
-    bars appended below showing the simulated OH* chemiluminescence and OH-PLIF
-    signals across the entire flame domain.
-    Saved as flame_bars_phi_{phi}.png  (does not overwrite flame_phi_{phi}.png).
-    """
-    import matplotlib.pyplot as plt
-    import matplotlib.gridspec as gridspec
-    from matplotlib.colors import Normalize
-    from matplotlib.cm import ScalarMappable
-
-    xc    = res.coord_values
-    chemi = _chemiluminescence_profile(res)
-    plif  = _plif_profile(res)
-
-    # Normalise each signal to its own peak (0→1)
-    chemi_n = chemi / chemi.max() if chemi.max() > 0 else chemi
-    plif_n  = plif  / plif.max()  if plif.max()  > 0 else plif
-
-    # ── layout: tall profile + 2 thin bars + colorbar row ────────────────────
-    fig = plt.figure(figsize=(10, 8))
-    gs  = gridspec.GridSpec(4, 1, height_ratios=[6, 0.55, 0.55, 0.35], hspace=0.0)
-    ax_main  = fig.add_subplot(gs[0])
-    ax_chemi = fig.add_subplot(gs[1], sharex=ax_main)
-    ax_plif  = fig.add_subplot(gs[2], sharex=ax_main)
-    ax_cbar  = fig.add_subplot(gs[3])
-    pos = ax_cbar.get_position()
-    ax_cbar.set_position([pos.x0, pos.y0 - 0.06, pos.width, pos.height])
-
-    # ── main profile (identical to plot_single_phi) ───────────────────────────
-    ax_T = ax_main.twinx()
-
-    colours = {
-        "OH":  "#2ca02c", "OH*": "#d62728", "H2O": "#1f77b4",
-        "H2":  "#ff7f0e", "O2":  "#9467bd", "H":   "#17becf",
-        "O":   "#e377c2", "HO2": "#8c564b",
-    }
-    scale = {"OH": OH_SCALE, "OH*": OHSTAR_SCALE, "H2O": 1, "H2": 1, "O2": 1,
-             "H": 50, "O": 50, "HO2": 500}
-
-    for sp, xsp in res.X.items():
-        f = scale.get(sp, 1)
-        if np.max(xsp) * f < 1e-8:
-            continue
-        if sp == "OH*":
-            label = f"X(OH*) ×{f:.2e}"
-        elif f > 1:
-            label = f"X({sp}) ×{f}"
-        else:
-            label = f"X({sp})"
-        ax_main.plot(xc, xsp * f, color=colours.get(sp, "grey"),
-                     linewidth=2.5 if sp == "OH" else 1.5,
-                     linestyle="--" if sp == "OH*" else "-",
-                     label=label)
-
-    ax_T.plot(xc, res.T, color="black", linewidth=2.0, linestyle=":", label="T [K]")
-    ax_main.axvline(0.0, color="grey", linestyle=":", linewidth=1.0)
-    ax_main.set_ylabel("Mole fraction [-]", fontsize=10)
-    ax_main.set_ylim(bottom=0)
-    ax_T.set_ylabel("Temperature [K]", fontsize=10)
-    ax_T.set_ylim(bottom=0)
-    ax_main.set_title(
-        f"H₂/air flame  |  φ = {res.phi:.1f}  |  SL = {res.sl*100:.1f} cm/s\n"
-        f"OH* CL  &  OH-PLIF [Q₁(8), 283.636 nm, E'' = 1324.3 cm⁻¹]",
-        fontsize=10)
-    l1, b1 = ax_main.get_legend_handles_labels()
-    l2, b2 = ax_T.get_legend_handles_labels()
-    ax_main.legend(l1 + l2, b1 + b2, loc="upper left", fontsize=7,
-                   ncol=2, framealpha=0.85)
-    ax_main.grid(True, alpha=0.3)
-    plt.setp(ax_main.get_xticklabels(), visible=False)
-
-    # ── image bars ────────────────────────────────────────────────────────────
-    # Interpolate signals onto a uniform x grid so imshow extent mapping is exact
-    cmap = "hot"
-    N_pixels = 500
-    xc_uniform = np.linspace(xc[0], xc[-1], N_pixels)
-    for ax, signal, label in [
-        (ax_chemi, chemi_n, "OH* CL"),
-        (ax_plif,  plif_n,  "OH-PLIF"),
-    ]:
-        sig_uniform = np.interp(xc_uniform, xc, signal)
-        ax.imshow(sig_uniform[np.newaxis, :], aspect="auto", cmap=cmap,
-                  vmin=0, vmax=1, extent=[xc[0], xc[-1], 0, 1])
-        ax.set_yticks([0.5])
-        ax.set_yticklabels([label], fontsize=9)
-        ax.tick_params(axis="y", length=0)
-        ax.axvline(0.0, color="cyan", linestyle=":", linewidth=0.8)
-        if ax is ax_chemi:
-            plt.setp(ax.get_xticklabels(), visible=False)
-
-    ax_plif.set_xlabel(res.coord_label, fontsize=10)
-
-    # Force all panels to exactly the same xlim so x=0 is perfectly aligned
-    for ax in [ax_main, ax_chemi, ax_plif]:
-        ax.set_xlim(xc[0], xc[-1])
-
-    sm = ScalarMappable(cmap=cmap, norm=Normalize(vmin=0, vmax=1))
-    sm.set_array([])
-    cbar = fig.colorbar(sm, cax=ax_cbar, orientation="horizontal")
-    cbar.set_label("Normalised signal [-]", fontsize=8)
-    cbar.set_ticks([0, 0.5, 1])
-
-    if save:
-        fname = RESULTS_DIR / f"flame_bars_phi_{res.phi:.1f}.png"
-        fig.savefig(fname, dpi=FIG_DPI, bbox_inches="tight")
-        print(f"  Saved → {fname}")
-
-    return fig
-
-
-def plot_phi_sweep(results: List[SimResult], save: bool = True) -> "matplotlib.figure.Figure":
+def plot_phi_sweep(results: List[SimResult], save: bool = True) -> "matplotlib.figure.Figure":  # type: ignore[name-defined]
     """
     Overlay plot: OH mole fraction and HRR for all φ on a single figure.
 
@@ -589,31 +455,13 @@ def plot_phi_sweep(results: List[SimResult], save: bool = True) -> "matplotlib.f
         colour = cmap(norm(res.phi))
         xc = res.coord_values
 
-        oh = res.X.get("OH", np.zeros_like(xc))
-        ax_oh.plot(xc, oh * OH_SCALE_OVERLAY,
+        ax_oh.plot(xc, res.X.get("OH", np.zeros_like(xc)),
                    color=colour, linewidth=1.5, label=f"φ={res.phi:.1f}")
-        ohstar = res.X.get("OH*", np.zeros_like(xc))
-        if ohstar.max() > 1e-12:
-            ax_oh.plot(xc, ohstar * OHSTAR_SCALE_OVERLAY,
-                       color=colour, linewidth=1.0, linestyle="--")
         ax_hrr.plot(xc, res.hrr / 1e9,
                     color=colour, linewidth=1.5, label=f"φ={res.phi:.1f}")
 
-    # Add a legend entry explaining the solid vs dashed lines
-    from matplotlib.lines import Line2D
-    oh_label     = f"OH ×{OH_SCALE_OVERLAY:.2e} (solid)" if OH_SCALE_OVERLAY > 1 else "OH (solid)"
-    ohstar_label = f"OH* ×{OHSTAR_SCALE_OVERLAY:.2e} (dashed)"
-    ax_oh.add_artist(ax_oh.legend(fontsize=7, ncol=2, loc="upper right"))
-    ax_oh.legend(handles=[
-        Line2D([0], [0], color="grey", linewidth=1.5, label=oh_label),
-        Line2D([0], [0], color="grey", linewidth=1.0, linestyle="--", label=ohstar_label),
-    ], fontsize=8, loc="upper left")
-
-    oh_title = f"OH ×{OH_SCALE_OVERLAY:.2e} (solid)  |  OH* ×{OHSTAR_SCALE_OVERLAY:.2e} (dashed)" \
-               if OH_SCALE_OVERLAY > 1 else \
-               f"OH (solid)  |  OH* ×{OHSTAR_SCALE_OVERLAY:.2e} (dashed)"
     for ax, ylabel, title in [
-        (ax_oh,  "Mole fraction  [-]",         oh_title),
+        (ax_oh,  "Mole fraction X(OH)  [-]",   "OH mole fraction"),
         (ax_hrr, "Heat release rate  [GW/m³]", "Heat release rate"),
     ]:
         ax.axvline(0.0, color="grey", linestyle=":", linewidth=1.0)
@@ -658,21 +506,13 @@ def plot_phi_sweep_zoom(results: List[SimResult], window_mm: float = 3.0, save: 
         colour = cmap(norm(res.phi))
         xc = res.coord_values
         mask = (xc >= -window_mm) & (xc <= window_mm)
-        oh = res.X.get("OH", np.zeros_like(xc))
-        ax_oh.plot(xc[mask], oh[mask] * OH_SCALE_OVERLAY,
+        ax_oh.plot(xc[mask], res.X.get("OH", np.zeros_like(xc))[mask],
                    color=colour, linewidth=1.5, label=f"φ={res.phi:.1f}")
-        ohstar = res.X.get("OH*", np.zeros_like(xc))
-        if ohstar.max() > 1e-12:
-            ax_oh.plot(xc[mask], ohstar[mask] * OHSTAR_SCALE_OVERLAY,
-                       color=colour, linewidth=1.0, linestyle="--")
         ax_hrr.plot(xc[mask], res.hrr[mask] / 1e9,
                     color=colour, linewidth=1.5, label=f"φ={res.phi:.1f}")
 
-    oh_title = f"OH ×{OH_SCALE_OVERLAY:.2e} (solid)  |  OH* ×{OHSTAR_SCALE_OVERLAY:.2e} (dashed)" \
-               if OH_SCALE_OVERLAY > 1 else \
-               f"OH (solid)  |  OH* ×{OHSTAR_SCALE_OVERLAY:.2e} (dashed)"
     for ax, ylabel, title in [
-        (ax_oh,  "Mole fraction [-]",          oh_title),
+        (ax_oh,  "Mole fraction X(OH)  [-]",  "OH mole fraction"),
         (ax_hrr, "Heat release rate  [GW/m³]", "Heat release rate"),
     ]:
         ax.axvline(0.0, color="grey", linestyle=":", linewidth=1.0)
@@ -738,9 +578,7 @@ def run_all_phi(
             res = simulate_phi(phi, loglevel=loglevel)
             print(f"SL = {res.sl*100:.2f} cm/s")
             plot_single_phi(res, save=True)
-            plot_single_phi_with_bars(res, save=True)
             plot_reaction_zone(res, save=True)
-            plot_diagnostic_bars(res, save=True)
             if save_csv:
                 res.save_csv()
             results.append(res)
@@ -766,7 +604,6 @@ __all__ = [
     "SimResult",
     "simulate_phi",
     "plot_single_phi",
-    "plot_single_phi_with_bars",
     "plot_phi_sweep",
     "run_all_phi",
 ]
@@ -787,25 +624,18 @@ def plot_reaction_zone(res: "SimResult", window_mm: float = 3.0, save: bool = Tr
     xc = res.coord_values
     mask = (xc >= -window_mm) & (xc <= window_mm)
 
-    colours = {"OH": "#2ca02c", "OH*": "#d62728", "H2": "#ff7f0e", "O2": "#9467bd",
+    colours = {"OH": "#2ca02c", "H2": "#ff7f0e", "O2": "#9467bd",
                "H": "#17becf", "O": "#e377c2", "HO2": "#8c564b"}
-    scale_z = {"OH": OH_SCALE, "OH*": OHSTAR_SCALE, "H2": 1, "O2": 1, "H": 50, "O": 50, "HO2": 500}
+    scale_z = {"OH": 50, "H2": 1, "O2": 1, "H": 50, "O": 50, "HO2": 500}
 
     for sp, col in colours.items():
         xsp = res.X.get(sp, np.zeros_like(xc))
-        f = scale_z.get(sp, 1)
-        if np.max(xsp[mask]) * f < 1e-8:
+        if np.max(xsp[mask]) < 1e-8:
             continue
-        if sp == "OH*":
-            label = f"X(OH*) ×{f:.2e}"
-        elif f > 1:
-            label = f"X({sp}) ×{f}"
-        else:
-            label = f"X({sp})"
+        f = scale_z.get(sp, 1)
+        label = f"X({sp}) \u00d7{f}" if f > 1 else f"X({sp})"
         ax_sp.plot(xc[mask], xsp[mask] * f, color=col,
-                   linewidth=2.0 if sp in ("OH", "OH*") else 1.4,
-                   linestyle="--" if sp == "OH*" else "-",
-                   label=label)
+                   linewidth=2.0 if sp == "OH" else 1.4, label=label)
 
     ax_T.plot(xc[mask], res.T[mask], color="black", linewidth=2.0,
               linestyle="--", label="T [K]")
@@ -830,184 +660,5 @@ def plot_reaction_zone(res: "SimResult", window_mm: float = 3.0, save: bool = Tr
         fname = RESULTS_DIR / f"zoom_phi_{res.phi:.1f}.png"
         fig.savefig(fname, dpi=FIG_DPI, bbox_inches="tight")
         print(f"  Saved \u2192 {fname}")
-
-    return fig
-
-def _chemiluminescence_profile(res: "SimResult") -> np.ndarray:
-    """
-    Simulated OH* chemiluminescence emission rate [mol/m³/s].
-    Only the radiative decay reaction OH* -> OH + hν contributes to the signal.
-    k_rad = A = 1.45e6 s⁻¹  (from Kathrotia 2012, already in mechanism)
-    Signal ∝ k_rad × [OH*] × n_total
-    """
-    import cantera as ct
-    k_rad = 1.45e6          # s⁻¹, Einstein A for OH* spontaneous emission
-    P     = P_INLET         # Pa
-    kb    = 1.380649e-23    # J/K
-    n_total = P / (kb * res.T)                          # total number density [molecules/m³]
-    x_ohstar = res.X.get("OH*", np.zeros_like(res.T))
-    n_ohstar = x_ohstar * n_total                       # OH* number density [molecules/m³]
-    return k_rad * n_ohstar                             # emission rate [molecules/m³/s]
-
-
-def _plif_profile(res: "SimResult") -> np.ndarray:
-    """
-    Simulated OH-PLIF signal (proportional, arbitrary units).
-    Laser: OH A-X (1,0) Q1(8) at 283.636 nm
-    E_lower = 1324.318 cm⁻¹  (HITRAN database, line QQ 8.5ef)
-
-    S_PLIF ∝ n_OH × f_B(T)
-    where f_B(T) = (2J+1) × exp(-E_lower × hc/kT) / Z_rot(T)
-    """
-    E_lower = 1324.318      # cm⁻¹, lower state energy for Q1(8), from HITRAN
-    hc_k    = 1.4388        # cm·K  (hc / k_B in spectroscopic units)
-    J       = 8.5           # half-integer J for OH Q1(8)
-    g_J     = 2 * J + 1     # = 18, degeneracy
-    P       = P_INLET       # Pa
-    kb      = 1.380649e-23  # J/K
-
-    T = res.T
-    # Rotational partition function for OH (doublet, open-shell diatomic)
-    Z_rot = 0.5955 * np.sqrt(T)
-
-    # Boltzmann fraction: population in J=8.5 lower level
-    f_B = g_J * np.exp(-E_lower * hc_k / T) / Z_rot
-
-    # OH number density [molecules/m³]
-    n_total = P / (kb * T)
-    x_oh    = res.X.get("OH", np.zeros_like(T))
-    n_oh    = x_oh * n_total
-
-    return n_oh * f_B      # PLIF signal [a.u.]
-
-
-def plot_diagnostic_bars(res: "SimResult", window_mm: float = 3.0, save: bool = True):
-    """
-    Zoomed reaction-zone plot (same as plot_reaction_zone) with two coloured
-    'image bars' below showing:
-      - Top bar   : simulated OH* chemiluminescence  (emission rate, hot colormap)
-      - Bottom bar: simulated OH-PLIF signal          (n_OH × f_B(T), hot colormap)
-
-    Both bars share the same x-axis as the profiles above and are normalised
-    independently so their peak is 1.
-    """
-    import matplotlib.pyplot as plt
-    import matplotlib.gridspec as gridspec
-    from matplotlib.colors import Normalize
-    from matplotlib.cm import ScalarMappable
-
-    # ── compute diagnostic profiles ──────────────────────────────────────────
-    xc   = res.coord_values
-    mask = (xc >= -window_mm) & (xc <= window_mm)
-    xm   = xc[mask]
-
-    chemi = _chemiluminescence_profile(res)[mask]
-    plif  = _plif_profile(res)[mask]
-
-    # Each bar normalised to its own peak (0→1).
-    # The PLIF tail naturally shows high values because ground-state OH
-    # persists in the post-flame — this IS the key physics result.
-    chemi_n = chemi / chemi.max() if chemi.max() > 0 else chemi
-    plif_n  = plif  / plif.max()  if plif.max()  > 0 else plif
-
-    # ── layout: tall profile panel + 2 thin bars + colorbar row ─────────────
-    fig = plt.figure(figsize=(8, 8))
-    gs  = gridspec.GridSpec(
-        4, 1,
-        height_ratios=[6, 0.55, 0.55, 0.35],
-        hspace=0.0,
-    )
-    ax_main  = fig.add_subplot(gs[0])
-    ax_chemi = fig.add_subplot(gs[1], sharex=ax_main)
-    ax_plif  = fig.add_subplot(gs[2], sharex=ax_main)
-    ax_cbar  = fig.add_subplot(gs[3])
-    # Push colorbar row down so x-axis label has room
-    pos = ax_cbar.get_position()
-    ax_cbar.set_position([pos.x0, pos.y0 - 0.06, pos.width, pos.height])
-
-    # ── main profile plot (same content as plot_reaction_zone) ────────────────
-    ax_T = ax_main.twinx()
-
-    colours = {"OH": "#2ca02c", "OH*": "#d62728", "H2": "#ff7f0e", "O2": "#9467bd",
-               "H": "#17becf", "O": "#e377c2", "HO2": "#8c564b"}
-    scale_z = {"OH": OH_SCALE, "OH*": OHSTAR_SCALE, "H2": 1, "O2": 1,
-               "H": 50, "O": 50, "HO2": 500}
-
-    for sp, col in colours.items():
-        xsp = res.X.get(sp, np.zeros_like(xc))
-        f   = scale_z.get(sp, 1)
-        if np.max(xsp[mask]) * f < 1e-8:
-            continue
-        if sp == "OH*":
-            label = f"X(OH*) ×{f:.2e}"
-        elif f > 1:
-            label = f"X({sp}) ×{f}"
-        else:
-            label = f"X({sp})"
-        ax_main.plot(xm, xsp[mask] * f, color=col,
-                     linewidth=2.0 if sp in ("OH", "OH*") else 1.4,
-                     linestyle="--" if sp == "OH*" else "-",
-                     label=label)
-
-    ax_T.plot(xm, res.T[mask], color="black", linewidth=2.0,
-              linestyle=":", label="T [K]")
-    ax_main.axvline(0.0, color="grey", linestyle=":", linewidth=1.0)
-    ax_main.set_ylabel("Mole fraction [-] (scaled)", fontsize=10)
-    ax_main.set_ylim(bottom=0)
-    ax_T.set_ylabel("Temperature [K]", fontsize=10)
-    ax_T.set_ylim(bottom=0)
-    ax_main.set_title(
-        f"Reaction zone  |  φ = {res.phi:.1f}  |  ±{window_mm} mm\n"
-        f"OH* chemiluminescence  &  OH-PLIF  [Q₁(8), 283.636 nm, E'' = 1324.3 cm⁻¹]",
-        fontsize=10)
-    l1, b1 = ax_main.get_legend_handles_labels()
-    l2, b2 = ax_T.get_legend_handles_labels()
-    ax_main.legend(l1 + l2, b1 + b2, loc="upper left", fontsize=7,
-                   ncol=2, framealpha=0.85)
-    ax_main.grid(True, alpha=0.3)
-    plt.setp(ax_main.get_xticklabels(), visible=False)
-
-    # ── image bars ────────────────────────────────────────────────────────────
-    cmap = "hot"
-    N_pixels = 500
-    xm_uniform = np.linspace(-window_mm, window_mm, N_pixels)
-
-    # Reference lines: HRR peak (x=0) and OH* peak
-    x_ohstar_peak = xm[np.argmax(chemi)]
-
-    for ax, signal, label in [
-        (ax_chemi, chemi_n, "OH* CL"),
-        (ax_plif,  plif_n,  "OH-PLIF"),
-    ]:
-        sig_uniform = np.interp(xm_uniform, xm, signal)
-        ax.imshow(sig_uniform[np.newaxis, :], aspect="auto", cmap=cmap,
-                  vmin=0, vmax=1, extent=[-window_mm, window_mm, 0, 1])
-        ax.set_yticks([0.5])
-        ax.set_yticklabels([label], fontsize=9)
-        ax.tick_params(axis="y", length=0)
-        ax.axvline(0.0, color="cyan", linestyle=":", linewidth=1.0,
-                   label="HRR peak" if ax is ax_chemi else "")
-        ax.axvline(x_ohstar_peak, color="white", linestyle="--", linewidth=1.0,
-                   label=f"OH* peak ({x_ohstar_peak:.2f} mm)" if ax is ax_chemi else "")
-        if ax is ax_chemi:
-            plt.setp(ax.get_xticklabels(), visible=False)
-
-    ax_plif.set_xlabel(res.coord_label, fontsize=10)
-
-    # Force all panels to exactly the same xlim so x=0 is perfectly aligned
-    for ax in [ax_main, ax_chemi, ax_plif]:
-        ax.set_xlim(-window_mm, window_mm)
-
-    # Horizontal colorbar in its own row — full width, no shift to bars
-    sm = ScalarMappable(cmap=cmap, norm=Normalize(vmin=0, vmax=1))
-    sm.set_array([])
-    cbar = fig.colorbar(sm, cax=ax_cbar, orientation="horizontal")
-    cbar.set_label("Normalised signal [-]", fontsize=8)
-    cbar.set_ticks([0, 0.5, 1])
-
-    if save:
-        fname = RESULTS_DIR / f"diagnostic_bars_phi_{res.phi:.1f}.png"
-        fig.savefig(fname, dpi=FIG_DPI, bbox_inches="tight")
-        print(f"  Saved → {fname}")
 
     return fig

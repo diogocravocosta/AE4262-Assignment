@@ -1,0 +1,4 @@
+import cantera as ct
+print(ct.__file__)          # shows where cantera is installed
+print(ct.get_data_directories())  # shows all directories where Cantera looks for data files
+print(ct.get_data_file('gri30.yaml'))
