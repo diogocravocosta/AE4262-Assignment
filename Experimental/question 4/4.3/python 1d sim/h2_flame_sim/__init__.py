@@ -258,7 +258,7 @@ def _load_gas() -> "cantera.Solution":  # type: ignore[name-defined]
     """Load the gas object, falling back to GRI-Mech if h2o2.yaml is absent."""
     import cantera as ct  # local import so the module can be imported without cantera
     try:
-        gas = ct.Solution(MECHANISM)
+        gas = ct.Solution(MECHANISM, "ohmech")
     except Exception:
         warnings.warn(
             f"Mechanism '{MECHANISM}' not found; falling back to '{MECHANISM_FALLBACK}'. "
