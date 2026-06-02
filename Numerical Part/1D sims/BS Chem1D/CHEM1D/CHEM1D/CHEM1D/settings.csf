@@ -1,0 +1,21 @@
+[GASMIXTURE_FUELCOMPOSITION]      => Fuel composition (mole fractions)
+CH4      1.00
+H2       0.00
+[ENDOF_FUELCOMPOSITION]
+
+[GASMIXTURE_OXIDIZERCOMPOSITION]  => Oxidizer composition (mole fractions)
+O2       0.21
+N2       0.79
+[ENDOF_OXIDIZERCOMPOSITION]
+
+[BOUNDARY_INLETPRESSURE]          => Pressure [Pa]
+1.01325E5
+
+[BOUNDARY_INLETTEMPERATURE]       => Temperature [K] of fuel and oxidizer stream
+300.0    300.0
+
+[BOUNDARY_EQUIVALENCERATIO]       => Equivalence ratio (left and right boundary)
+0.95     0.00
+
+[PREPROCESSING_STARTSOLUTIONFILE] => Solution from previous run is used as initial guess
+yiend.dat

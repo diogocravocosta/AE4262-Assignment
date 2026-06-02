@@ -1,0 +1,24 @@
+[MODEL_FLAMETYPE]
+BURNERSTABILIZED
+
+! Temperature in the burner is controlled by [SOLID_TWALL]
+! Three different options are possible
+! Twall = 0 : Solve heat equation for solid material
+! Twall > 0 : Set the temperature of the burner to a constant value
+! Twall < 0 : Set the temperature of both the burner and the gas to a constant value
+
+[SOLID_TWALL]
+-333.0
+[SOLID_LCERAMIC]                        => Burner plate thickness (cm)
+0.20
+[SOLID_VOLUMETRICPOROSITY]              => Unit : cm^3/cm^3
+0.60
+
+[BOUNDARY_MASSFLOW]                     => Inlet mass flux (gr/cm2.s)
+0.035
+
+[BOUNDARY_EQUIVALENCERATIO]             => left and right equivalence ratio
+0.90   0.00
+
+[PREPROCESSING_STARTSOLUTIONFILE]       => Solution from previous run is used as initial guess
+yiend.dat
