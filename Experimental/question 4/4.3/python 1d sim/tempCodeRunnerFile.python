@@ -1,0 +1,68 @@
+import cantera as ct
+import numpy as np
+import matplotlib.pyplot as plt
+
+def adiabatic_complete(fuel, phi, T0=300, P=ct.one_atm):
+    gas = ct.Solution('gri30.yaml')
+    
+    # Get enthalpy of reactants
+    gas.set_equivalence_ratio(phi, fuel, 'O2:1, N2:3.76')
+    gas.TP = T0, P
+    h_reactants = gas.enthalpy_mass
+    
+    # Build complete combustion products manually
+    if fuel == 'CH4':
+        # CH4 + 2O2 -> CO2 + 2H2O
+        if phi <= 1.0:  # lean: excess O2
+            co2 = 1
+            h2o = 2
+            o2_excess = 2 * (1/phi - 1)
+            n2 = 2 * 3.76 / phi
+        else:           # rich: excess CH4 (unburned)
+            co2 = 1/phi  # only fraction burns
+            h2o = 2/phi
+            o2_excess = 0
+            ch4_excess = 1 - 1/phi
+            n2 = 2 * 3.76 / phi
+    elif fuel == 'H2':
+        # H2 + 0.5O2 -> H2O
+        if phi <= 1.0:
+            h2o = 1
+            o2_excess = 0.5 * (1/phi - 1)
+            n2 = 0.5 * 3.76 / phi
+        else:
+            h2o = 1/phi
+            o2_excess = 0
+            h2_excess = 1 - 1/phi
+            n2 = 0.5 * 3.76 / phi
+
+    # Set product composition
+    if fuel == 'CH4':
+        if phi <= 1.0:
+            comp = f'CO2:{co2}, H2O:{h2o}, O2:{o2_excess}, N2:{n2}'
+        else:
+            comp = f'CO2:{co2}, H2O:{h2o}, CH4:{ch4_excess}, N2:{n2}'
+    elif fuel == 'H2':
+        if phi <= 1.0:
+            comp = f'H2O:{h2o}, O2:{o2_excess}, N2:{n2}'
+        else:
+            comp = f'H2O:{h2o}, H2:{h2_excess}, N2:{n2}'
+
+    # Set products at same H and P as reactants -> solve for T
+    gas.TPX = T0, P, comp
+    gas.HP = h_reactants, P  # Cantera finds T that satisfies energy balance
+    
+    return gas.T
+
+phis = np.linspace(0.4, 2.0, 50)
+
+for fuel in ['CH4', 'H2']:
+    temps = [adiabatic_complete(fuel, phi) for phi in phis]
+    plt.plot(phis, temps, label=f'{fuel}/air')
+
+plt.xlabel('Equivalence ratio φ')
+plt.ylabel('Adiabatic flame temperature (K)')
+plt.legend()
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.show()

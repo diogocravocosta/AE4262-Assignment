@@ -1,8 +1,8 @@
 %% Set the variable range
 
-valstrt = 0.95;  % Start value
-valend  = 0.60;  % End value
-absd    = -0.05; % Step size
+valstrt = 0.50;
+valend  = 1.30;
+absd    = 0.05;
 
 val = (valstrt:absd:valend);
 N = length(val);
