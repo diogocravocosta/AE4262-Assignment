@@ -1,0 +1,68 @@
+import cantera as ct
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Setup the gas and parameters
+gas = ct.Solution('gri30.yaml')
+phis = np.linspace(0.5, 1.4, 10) 
+T_inlet = 1100 # K
+pressure = ct.one_atm
+air = 'O2:1.0, N2:3.76'
+
+T_ad_H2 = []
+T_ad_CH4 = []
+
+for phi in phis:
+    # ==========================================
+    # HYDROGEN
+    # ==========================================
+    # 1. Get Enthalpy of Reactants
+    gas.TP = T_inlet, pressure
+    gas.set_equivalence_ratio(phi, 'H2', air)
+    H_reactants_H2 = gas.enthalpy_mass
+    
+    # 2. Set Exact Complete Combustion Products
+    if phi <= 1.0:
+        X_prod_H2 = {'H2O': 1.0, 'O2': 0.5*(1.0/phi - 1.0), 'N2': 1.88/phi}
+    else:
+        X_prod_H2 = {'H2O': 1.0, 'N2': 1.88, 'H2': phi - 1.0}
+        
+    # 3. Find T_ad by forcing Constant Enthalpy (H) and Pressure (P) with fixed Products (X)
+    gas.HPX = H_reactants_H2, pressure, X_prod_H2
+    T_ad_H2.append(gas.T)
+    
+    # ==========================================
+    # METHANE
+    # ==========================================
+    # 1. Get Enthalpy of Reactants
+    gas.TP = T_inlet, pressure
+    gas.set_equivalence_ratio(phi, 'CH4', air)
+    H_reactants_CH4 = gas.enthalpy_mass
+    
+    # 2. Set Exact Complete Combustion Products
+    if phi <= 1.0:
+        X_prod_CH4 = {'CO2': 1.0, 'H2O': 2.0, 'O2': 2.0*(1.0/phi - 1.0), 'N2': 7.52/phi}
+    else:
+        X_prod_CH4 = {'CO2': 1.0, 'H2O': 2.0, 'N2': 7.52, 'CH4': phi - 1.0}
+        
+    # 3. Find T_ad
+    gas.HPX = H_reactants_CH4, pressure, X_prod_CH4
+    T_ad_CH4.append(gas.T)
+
+# ==========================================
+# PLOTTING
+# ==========================================
+plt.figure(figsize=(9, 6))
+
+plt.plot(phis, T_ad_H2, '-o', color='#d62728', linewidth=2, label='Hydrogen ($H_2$)')
+plt.plot(phis, T_ad_CH4, '-s', color='#1f77b4', linewidth=2, label='Methane ($CH_4$)')
+
+#plt.title('Complete Combustion $T_{ad}$ at $T_{in} = 1100$ K', fontsize=14)
+plt.xlabel('Equivalence Ratio, $\phi$', fontsize=12)
+plt.ylabel('Adiabatic Flame Temperature (K)', fontsize=12)
+plt.grid(True, linestyle='--', alpha=0.7)
+plt.legend(fontsize=12)
+
+plt.tight_layout()
+#plt.savefig('T_ad_Complete_Combustion_1100K.pdf', format='pdf')
+plt.show()
