@@ -1,7 +1,7 @@
 import cantera as ct
 import matplotlib.pyplot as plt
 
-phis = [0.8, 1.0, 1.2]
+phis = [0.6, 0.7, 0.8, 1.0, 1.2, 1.3, 1.4]
 speeds = []
 
 for phi in phis:

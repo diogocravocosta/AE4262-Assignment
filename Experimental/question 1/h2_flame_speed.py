@@ -1,7 +1,8 @@
 import cantera as ct
 import matplotlib.pyplot as plt
 
-phis = [0.5,0.6,0.7,0.8,0.9, 1.0,1.1,1.2,1.3]
+phis = [1.55]
+
 speeds = []
 
 gas = ct.Solution('gri30.yaml')

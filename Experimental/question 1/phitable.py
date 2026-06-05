@@ -91,7 +91,7 @@ if __name__ == '__main__':
     
 
     # --- RUN RUNTIME CASE 1: METHANE (CH4) ---
-    methane_phi_values = [0.8, 1.0, 1.2]
+    methane_phi_values = [0.6, 0.7, 0.8, 1.0, 1.2, 1.3, 1.4]
 
     print("Generating Methane data table...")
     methane_profile = chemical_balance('CH4', 'air')
@@ -107,7 +107,7 @@ if __name__ == '__main__':
 
     # --- RUN RUNTIME CASE 2: HYDROGEN (H2) ---
     import numpy as np
-    hydrogen_phi_values = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2,1.3]
+    hydrogen_phi_values = [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.55, 1.6, 1.7]
 
     print("Generating Hydrogen data table...")
     hydrogen_profile = chemical_balance('H2', 'air')
