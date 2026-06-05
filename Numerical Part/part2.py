@@ -117,6 +117,7 @@ for fuel in fuels:
 plt.xlabel('Equivalence Ratio, $\phi$')
 plt.ylabel('NO Emissions (ppm)')
 plt.yscale('log') # NO varies by orders of magnitude, log scale is best
+plt.ylim([1e-2, 1e4])
 plt.grid(True, which="both", linestyle='--', alpha=0.5)
 plt.legend()
 plt.tight_layout()
