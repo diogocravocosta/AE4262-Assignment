@@ -71,7 +71,7 @@ for fuel in fuels:
         NO_ppm = X_NO * 1e6
         
         # Floor value to avoid log(0) errors at phi=1.0
-        plot_ppm = max(NO_ppm, 1e-2)
+        plot_ppm = max(NO_ppm, 1e-5)
         data_ppm[fuel].append(plot_ppm)
 
 # ========================================================
@@ -87,9 +87,11 @@ plt.ylabel('NO Emissions (ppm)')
 
 # Set to Log Scale
 plt.yscale('log')
+plt.ylim([1e-2, 1e4])
+
 
 # --- NEW: Lock the Y-axis bounds to match Part 2d ---
-plt.ylim(1, 10000) 
+#plt.ylim(1, 10000) 
 
 plt.grid(True, which='both', linestyle='--', alpha=0.5)
 plt.legend(fontsize=12)
